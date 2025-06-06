@@ -5,7 +5,7 @@ import os
 from faker import Faker
 from app.config import config
 # TODO: remember to import all the DB models here
-from app.models.registration import Registration  # NOQA
+from app.models import Event, User, Registration  # NOQA
 
 
 sqlite_file_name = config.root_dir / "data/database.db"
@@ -20,8 +20,32 @@ def init_database() -> None:
     if not ds_exists:
         f = Faker("it_IT")
         with Session(engine) as session:
-            # TODO: (optional) initialize the database with fake data
-            ...
+            # (optional) initialize the database with fake data
+            events = [
+                Event(
+                    title=f.sentence(nb_words=3),
+                    description=f.text(max_nb_chars=40),
+                    date=f.date_time_this_year(),
+                    location=f.city(),
+                )
+                for _ in range(5)
+            ]
+            users = [
+                User(username=f.user_name(), name=f.name(), email=f.email())
+                for _ in range(5)
+            ]
+
+            session.add_all([*events, *users])
+            session.commit()
+
+            for idx in range(5):
+                session.add(
+                    Registration(
+                        username=users[idx % len(users)].username,
+                        event_id=events[idx % len(events)].id,
+                    )
+                )
+            session.commit()
 
 
 def get_session():
